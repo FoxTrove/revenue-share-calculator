@@ -13,10 +13,10 @@ def calculate_revenue_share_cap(
     minimum_guarantee_pct, 
     guarantee_due_months,  # Guarantee due term (in months)
     monthly_rev_share_pct,
-    base_risk_factor=0.7,
+    base_risk_factor=0.3,
     threshold_multiplier=0.03,  # Sensitivity to revenue delay
     work_multiplier=0.2, 
-    guarantee_risk_factor=0.5,  # Base sensitivity for guarantee risk (unchanged)
+    guarantee_risk_factor=0.3,  # Base sensitivity for guarantee risk (unchanged)
     revenue_share_risk_factor=0.05,  # Reduced sensitivity for revenue share risk
     deferred_payment_risk_factor=0.01  # Reduced extra risk per extra deferred month
 ):
