@@ -17,7 +17,7 @@ def calculate_revenue_share_cap(
     threshold_multiplier=0.03,  # Sensitivity to revenue delay
     work_multiplier=0.2, 
     guarantee_risk_factor=0.3,  # Base sensitivity for guarantee risk (unchanged)
-    revenue_share_risk_factor=0.05,  # Reduced sensitivity for revenue share risk
+    revenue_share_risk_factor=0.08,  # Reduced sensitivity for revenue share risk
     deferred_payment_risk_factor=0.01  # Reduced extra risk per extra deferred month
 ):
     """
