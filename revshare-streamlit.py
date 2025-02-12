@@ -41,15 +41,16 @@ def calculate_revenue_share_cap(
        Guaranteed amount = total_contract × (minimum_guarantee_pct / 100).  
        Actual guarantee payments = monthly_payment × guarantee_due_months.
        If actual guarantee payments meet or exceed the guaranteed amount, then guarantee_multiplier = 1.  
-       Otherwise, the shortfall ratio is calculated and used to increase risk:
-          guarantee_multiplier = 1 + (shortfall_ratio × guarantee_risk_factor × (guarantee_due_months/12))
+       Otherwise, 
+         guarantee_multiplier = 1 + (shortfall_ratio × guarantee_risk_factor × (guarantee_due_months/12))
+       where shortfall_ratio = (guaranteed_amount – actual_guarantee_payments) / guaranteed_amount.
        
     5. **Revenue Share Risk:**  
        rev_share_multiplier = 1 + ((1 - (monthly_rev_share_pct / 100)) × revenue_share_risk_factor)
        
     6. **Deferred Payment Risk:**  
        estimated_work_months = total_contract / (SERVICE_PROVIDER_HOURLY_RATE × service_provider_hours × 4).  
-       If total paid ≥ total_contract, then deferred_payment_multiplier = 1  
+       If total paid ≥ total_contract, then deferred_payment_multiplier = 1.  
        Else, extra_months = max(num_payments - estimated_work_months, 0) and  
        deferred_payment_multiplier = 1 + (extra_months × deferred_payment_risk_factor)
        
@@ -57,7 +58,8 @@ def calculate_revenue_share_cap(
     Total Payment = total_contract × Final Multiplier.
     Additional Revenue Share = Total Payment – total_contract.
     
-    *Note:* If full payment is achieved on or before the estimated work duration, all extra risk multipliers are neutralized.
+    *Note:* If full payment is achieved on or before the estimated work duration,
+    all extra risk multipliers are neutralized.
     """
     # Total paid from monthly payments
     total_paid = monthly_payment * num_payments
@@ -188,9 +190,9 @@ st.markdown("""
 3. **Work/Pay Deficit Risk:**  
    Compares the service provider's expected monthly earnings (calculated from service provider hours and the fixed hourly rate) with the monthly payment. A larger gap adds risk.
 4. **Guarantee Risk:**  
-   Determines if the payments over the guarantee period (monthly payment × guarantee due months) meet the guaranteed amount (contract value × minimum guarantee %). If they don’t, extra risk is added.
+   Compares the guaranteed amount (contract value × minimum guarantee %) with the actual payments made over the guarantee period (monthly payment × guarantee due months). If the actual payments fall short, extra risk is added.
 5. **Revenue Share Risk:**  
-   A lower monthly revenue share percentage increases risk.
+   A lower monthly revenue share percentage adds risk.
 6. **Deferred Payment Risk:**  
    Estimates how long the work should take (contract value divided by the service provider’s monthly earning capacity) and adds risk if the payment period extends beyond that duration.
    
