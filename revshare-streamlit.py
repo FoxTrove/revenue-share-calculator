@@ -16,7 +16,7 @@ def calculate_revenue_share_cap(
     base_risk_factor=0.3,
     threshold_multiplier=0.03,  # Sensitivity to revenue delay
     work_multiplier=0.2, 
-    guarantee_risk_factor=0.3,  # Base sensitivity for guarantee risk (unchanged)
+    guarantee_risk_factor=0.5,  # Base sensitivity for guarantee risk (unchanged)
     revenue_share_risk_factor=0.05,  # Reduced sensitivity for revenue share risk
     deferred_payment_risk_factor=0.01  # Reduced extra risk per extra deferred month
 ):
@@ -142,15 +142,15 @@ total_contract = st.number_input("Total contract value ($)", min_value=0.0, valu
                                  help="The full contract value for the project.")
 num_payments = st.number_input("Number of monthly payments", min_value=1, value=12, step=1,
                                help="The number of months over which payments will be made.")
-monthly_payment = st.number_input("Monthly payment amount ($)", min_value=500.0, value=2000.0, step=100.0,
+monthly_payment = st.number_input("Monthly payment amount ($)", min_value=0.0, value=2000.0, step=100.0,
                                   help="The cash amount paid each month.")
 expected_monthly_revenue = st.number_input("Expected monthly revenue ($)", min_value=0.0, value=10000.0, step=100.0,
                                            help="The revenue the company is expected to generate each month.")
 revenue_threshold = st.number_input("Revenue threshold ($)", min_value=0.0, value=25000.0, step=100.0,
                                     help="The revenue level that triggers revenue share payments.")
-service_provider_hours = st.number_input("Service provider hours per week", min_value=5.0, value=10.0, step=1.0,
+service_provider_hours = st.number_input("Service provider hours per week", min_value=0.0, value=10.0, step=1.0,
                                          help="The number of hours per week the service provider will work on the project.")
-minimum_guarantee_pct = st.number_input("Minimum guarantee (% of contract)", min_value=50.0, max_value=70.0, value=100.0, step=1.0,
+minimum_guarantee_pct = st.number_input("Minimum guarantee (% of contract)", min_value=0.0, max_value=70.0, value=100.0, step=1.0,
                                         help="The percentage of the contract value that is guaranteed to be paid. Higher guarantees reduce risk.")
 guarantee_due_months = st.number_input("Guarantee Due (months)", min_value=1, value=18, step=1,
                                        help="The number of months within which the guaranteed payment must be completed. Longer terms add risk.")
