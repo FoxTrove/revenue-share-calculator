@@ -23,26 +23,26 @@ def calculate_revenue_share_cap(
     """
     Calculates the Total Payment Cap (the adjusted payment including risk)
     and the Additional Revenue Share (Total Payment minus Contract Value).
-    
+
     Risk factors are applied only if full contract payment isn’t achieved “timely.”
     
     1. **Contract Payment Risk:**  
-       base_multiplier = 1 + (unpaid_fraction × base_risk_factor)
+       base_multiplier = 1 + (unpaid_fraction * base_risk_factor)
        
     2. **Revenue Delay Risk:**  
-       revenue_delay_multiplier = 1 + (delay_months × threshold_multiplier)  
+       revenue_delay_multiplier = 1 + (delay_months * threshold_multiplier)  
        (Delay = (revenue_threshold / expected_monthly_revenue) - 1, minimum 0)
        
     3. **Work/Pay Deficit Risk:**  
-       deficit_multiplier = 1 + (deficit_percentage × work_multiplier)  
+       deficit_multiplier = 1 + (deficit_percentage * work_multiplier)  
        (Deficit percentage = (service provider's expected monthly earnings – monthly_payment) / expected monthly earnings)
        
     4. **Guarantee Risk:**  
        If total paid ≥ (total_contract × (minimum_guarantee_pct/100)), then guarantee_multiplier = 1  
-       Otherwise, guarantee_multiplier = 1 + ((1 - (minimum_guarantee_pct/100)) × guarantee_risk_factor × (guarantee_due_months/12))
+       Otherwise, guarantee_multiplier = 1 + ((1 - (minimum_guarantee_pct/100)) * guarantee_risk_factor * (guarantee_due_months/12))
        
     5. **Revenue Share Risk:**  
-       rev_share_multiplier = 1 + ((1 - (monthly_rev_share_pct/100)) × revenue_share_risk_factor)
+       rev_share_multiplier = 1 + ((1 - (monthly_rev_share_pct/100)) * revenue_share_risk_factor)
        
     6. **Deferred Payment Risk:**  
        estimated_work_months = total_contract / (SERVICE_PROVIDER_HOURLY_RATE × service_provider_hours × 4).  
@@ -53,6 +53,9 @@ def calculate_revenue_share_cap(
     Final Multiplier = product of all multipliers.
     Total Payment = total_contract × Final Multiplier.
     Additional Revenue Share = Total Payment – total_contract.
+    
+    *Note:* If full payment is achieved on or before the estimated work duration,
+    extra risk factors are neutralized.
     """
     # Total paid from monthly payments
     total_paid = monthly_payment * num_payments
@@ -98,7 +101,7 @@ def calculate_revenue_share_cap(
         extra_months = max(num_payments - estimated_work_months, 0)
         deferred_payment_multiplier = 1 + extra_months * deferred_payment_risk_factor
 
-    # If full payment is achieved on or before the estimated work duration, neutralize all extra risk
+    # Neutralize extra risk if full payment is achieved on or before estimated work duration
     if total_paid >= total_contract and num_payments <= estimated_work_months:
         base_multiplier = revenue_delay_multiplier = deficit_multiplier = guarantee_multiplier = rev_share_multiplier = deferred_payment_multiplier = 1.0
         final_multiplier = 1.0
@@ -123,15 +126,24 @@ st.title("Interactive Revenue Share Calculator")
 
 st.markdown("### Input your values below:")
 
-total_contract = st.number_input("Total contract value ($)", min_value=0.0, value=29000.0, step=100.0)
-num_payments = st.number_input("Number of monthly payments", min_value=1, value=6, step=1)
-monthly_payment = st.number_input("Monthly payment amount ($)", min_value=0.0, value=5000.0, step=100.0)
-expected_monthly_revenue = st.number_input("Expected monthly revenue ($)", min_value=0.0, value=10000.0, step=100.0)
-revenue_threshold = st.number_input("Revenue threshold ($)", min_value=0.0, value=20000.0, step=100.0)
-service_provider_hours = st.number_input("Service provider hours per week", min_value=0.0, value=15.0, step=1.0)
-minimum_guarantee_pct = st.number_input("Minimum guarantee (% of contract)", min_value=0.0, max_value=100.0, value=70.0, step=1.0)
-guarantee_due_months = st.number_input("Guarantee Due (months)", min_value=1, value=17, step=1)
-monthly_rev_share_pct = st.number_input("Monthly revenue share (%)", min_value=0.0, max_value=100.0, value=20.0, step=1.0)
+total_contract = st.number_input("Total contract value ($)", min_value=0.0, value=29000.0, step=100.0, 
+                                 help="The full contract value for the project.")
+num_payments = st.number_input("Number of monthly payments", min_value=1, value=6, step=1, 
+                               help="The number of months over which payments will be made.")
+monthly_payment = st.number_input("Monthly payment amount ($)", min_value=0.0, value=5000.0, step=100.0, 
+                                  help="The cash amount paid each month.")
+expected_monthly_revenue = st.number_input("Expected monthly revenue ($)", min_value=0.0, value=10000.0, step=100.0, 
+                                           help="The revenue the company is expected to generate each month.")
+revenue_threshold = st.number_input("Revenue threshold ($)", min_value=0.0, value=20000.0, step=100.0, 
+                                    help="The revenue level that triggers revenue share payments.")
+service_provider_hours = st.number_input("Service provider hours per week", min_value=0.0, value=15.0, step=1.0, 
+                                         help="The number of hours per week the service provider will work on the project.")
+minimum_guarantee_pct = st.number_input("Minimum guarantee (% of contract)", min_value=0.0, max_value=100.0, value=70.0, step=1.0, 
+                                        help="The percentage of the contract value that is guaranteed to be paid.")
+guarantee_due_months = st.number_input("Guarantee Due (months)", min_value=1, value=17, step=1, 
+                                       help="The number of months within which the guaranteed payment must be completed.")
+monthly_rev_share_pct = st.number_input("Monthly revenue share (%)", min_value=0.0, max_value=100.0, value=20.0, step=1.0, 
+                                        help="The percentage of monthly revenue to be shared after the guarantee period.")
 
 (total_payment, final_multiplier, base_multiplier, 
  revenue_delay_multiplier, deficit_multiplier, guarantee_multiplier, 
@@ -168,7 +180,7 @@ st.markdown("""
 1. **Contract Payment Risk:**  
    Calculates how much of the contract is paid upfront. Lower upfront cash increases risk.
 2. **Revenue Delay Risk:**  
-   Estimates the delay before revenue share kicks in (based on revenue threshold and expected monthly revenue).
+   Estimates the delay before revenue share kicks in (based on revenue threshold and expected revenue).
 3. **Work/Pay Deficit Risk:**  
    Compares the service provider's expected monthly earnings (from work hours and hourly rate) with the monthly payment. A larger gap adds risk.
 4. **Guarantee Risk:**  
@@ -178,5 +190,5 @@ st.markdown("""
 6. **Deferred Payment Risk:**  
    Estimates how long the work should take (total contract divided by the service provider’s monthly earning capacity) and adds risk if payments extend beyond that duration.
    
-The multipliers multiply together to form a Final Multiplier that adjusts the Contract Value into the Total Payment. The Additional Revenue Share is the extra amount above the Contract Value.
+These multipliers multiply together to form a Final Multiplier that adjusts the Contract Value into the Total Payment. The Additional Revenue Share is the extra amount above the Contract Value.
 """)
