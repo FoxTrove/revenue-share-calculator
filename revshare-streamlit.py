@@ -1,7 +1,7 @@
 import streamlit as st
 import math
 
-# Define a constant hourly rate for the service provider (hidden from client)
+# Define a constant hourly rate for the service provider (hidden from the client)
 SERVICE_PROVIDER_HOURLY_RATE = 60.0
 
 def calculate_revenue_share_cap(
@@ -22,8 +22,8 @@ def calculate_revenue_share_cap(
     deferred_payment_risk_factor=0.01  # Reduced extra risk per extra deferred month
 ):
     """
-    Calculates the Total Payment Cap (adjusted payment including risk) and the
-    Additional Revenue Share (Total Payment - Contract Value).
+    Calculates the Total Payment Cap (adjusted for risk) and the Additional Revenue Share 
+    (Total Payment - Contract Value).
 
     If full payment is achieved (monthly_payment * num_payments >= total_contract),
     all extra risk is neutralized (final multiplier = 1).
@@ -31,35 +31,35 @@ def calculate_revenue_share_cap(
     Risk factors (applied only if full payment isn’t achieved):
 
     1. Contract Payment Risk:
-       base_multiplier = 1 + (unpaid_fraction * base_risk_factor)
+         base_multiplier = 1 + (unpaid_fraction * base_risk_factor)
 
     2. Revenue Delay Risk:
-       revenue_delay_multiplier = 1 + (delay_months * threshold_multiplier)
-       where delay_months = max((revenue_threshold / expected_monthly_revenue) - 1, 0)
+         revenue_delay_multiplier = 1 + (delay_months * threshold_multiplier)
+         where delay_months = max((revenue_threshold / expected_monthly_revenue) - 1, 0)
 
     3. Work/Pay Deficit Risk:
-       deficit_multiplier = 1 + (deficit_percentage * work_multiplier)
-       where deficit_percentage = (expected_monthly_earnings - monthly_payment) / expected_monthly_earnings
-       and expected_monthly_earnings = service_provider_hours * SERVICE_PROVIDER_HOURLY_RATE * 4
+         deficit_multiplier = 1 + (deficit_percentage * work_multiplier)
+         where deficit_percentage = (expected_monthly_earnings - monthly_payment) / expected_monthly_earnings,
+         and expected_monthly_earnings = service_provider_hours * SERVICE_PROVIDER_HOURLY_RATE * 4
 
     4. Guarantee Risk (Revised):
-       - baseline_guarantee_pct = min((monthly_payment * guarantee_due_months) / total_contract * 100, 100)
-       - Define M_max = 1 + guarantee_risk_factor * (guarantee_due_months / 12)
-       - If minimum_guarantee_pct >= 100 or baseline_guarantee_pct >= 100, then guarantee_multiplier = 1.
-       - If minimum_guarantee_pct <= baseline_guarantee_pct, then guarantee_multiplier = M_max.
-       - Otherwise, linearly interpolate:
-         guarantee_multiplier = M_max - ((minimum_guarantee_pct - baseline_guarantee_pct) / (100 - baseline_guarantee_pct)) * (M_max - 1)
+         - Compute baseline_guarantee_pct = min((monthly_payment * guarantee_due_months) / total_contract * 100, 100)
+         - Define M_max = 1 + guarantee_risk_factor * (guarantee_due_months / 12)
+         - If minimum_guarantee_pct >= 100, then guarantee_multiplier = 1.
+         - If minimum_guarantee_pct <= baseline_guarantee_pct, then guarantee_multiplier = M_max.
+         - Otherwise, linearly interpolate:
+               guarantee_multiplier = M_max - ((minimum_guarantee_pct - baseline_guarantee_pct) / (100 - baseline_guarantee_pct)) * (M_max - 1)
 
     5. Revenue Share Risk:
-       rev_share_multiplier = 1 + ((1 - (monthly_rev_share_pct / 100)) * revenue_share_risk_factor)
+         rev_share_multiplier = 1 + ((1 - (monthly_rev_share_pct / 100)) * revenue_share_risk_factor)
 
     6. Deferred Payment Risk:
-       estimated_work_months = total_contract / (SERVICE_PROVIDER_HOURLY_RATE * service_provider_hours * 4)
-       If total_paid >= total_contract, then deferred_payment_multiplier = 1.
-       Otherwise, extra_months = max(num_payments - estimated_work_months, 0) and
-       deferred_payment_multiplier = 1 + (extra_months * deferred_payment_risk_factor)
+         estimated_work_months = total_contract / (SERVICE_PROVIDER_HOURLY_RATE * service_provider_hours * 4)
+         If total_paid >= total_contract, then deferred_payment_multiplier = 1.
+         Otherwise, extra_months = max(num_payments - estimated_work_months, 0)
+         and deferred_payment_multiplier = 1 + (extra_months * deferred_payment_risk_factor)
 
-    Final Multiplier = product of all multipliers.
+    Final Multiplier is the product of all risk multipliers.
     Total Payment = total_contract * Final Multiplier.
     Additional Revenue Share = Total Payment - total_contract.
     """
@@ -92,7 +92,7 @@ def calculate_revenue_share_cap(
     baseline_guarantee_pct = (monthly_payment * guarantee_due_months) / total_contract * 100
     baseline_guarantee_pct = min(baseline_guarantee_pct, 100)
     M_max = 1 + guarantee_risk_factor * (guarantee_due_months / 12)
-    if minimum_guarantee_pct >= 100 or baseline_guarantee_pct >= 100:
+    if minimum_guarantee_pct >= 100:
         guarantee_multiplier = 1.0
     elif minimum_guarantee_pct <= baseline_guarantee_pct:
         guarantee_multiplier = M_max
@@ -110,7 +110,7 @@ def calculate_revenue_share_cap(
         extra_months = max(num_payments - estimated_work_months, 0)
         deferred_payment_multiplier = 1 + extra_months * deferred_payment_risk_factor
 
-    # Neutralize extra risk if full payment is achieved
+    # If full payment is achieved, neutralize extra risk entirely.
     if total_paid >= total_contract:
         base_multiplier = revenue_delay_multiplier = deficit_multiplier = guarantee_multiplier = rev_share_multiplier = deferred_payment_multiplier = 1.0
         final_multiplier = 1.0
@@ -182,6 +182,33 @@ st.write(f"- **Guarantee Multiplier:** {guarantee_multiplier:.2f}")
 st.write(f"- **Revenue Share Multiplier:** {rev_share_multiplier:.2f}")
 st.write(f"- **Deferred Payment Multiplier:** {deferred_payment_multiplier:.2f}")
 
+# Additional breakdown: show dollar contributions for each risk factor.
+if additional_revenue_share > 0:
+    # Create a dictionary of the risk multipliers
+    risk_factors = {
+        "Contract Payment Risk": base_multiplier,
+        "Revenue Delay Risk": revenue_delay_multiplier,
+        "Work/Pay Deficit Risk": deficit_multiplier,
+        "Guarantee Risk": guarantee_multiplier,
+        "Revenue Share Risk": rev_share_multiplier,
+        "Deferred Payment Risk": deferred_payment_multiplier
+    }
+    # Use natural logarithms to decompose the multiplicative contribution
+    total_log = sum(math.log(val) for val in risk_factors.values() if val > 1)  # only factors > 1 add risk
+    st.markdown("---")
+    st.markdown("#### Additional Revenue Share Contribution by Risk Factor:")
+    for label, val in risk_factors.items():
+        # Only include factors that contribute (val > 1)
+        if val > 1 and total_log > 0:
+            contribution_fraction = math.log(val) / total_log
+            contribution_dollars = contribution_fraction * additional_revenue_share
+            st.write(f"- **{label}:** ${contribution_dollars:,.2f}")
+        else:
+            st.write(f"- **{label}:** $0.00")
+else:
+    st.markdown("---")
+    st.markdown("#### Additional Revenue Share Contribution by Risk Factor: $0.00 (No additional revenue share)")
+
 st.markdown("---")
 st.markdown("""
 **How It Works:**  
@@ -192,16 +219,17 @@ st.markdown("""
 3. **Work/Pay Deficit Risk:**  
    Compares the service provider's expected monthly earnings (from their weekly hours and fixed hourly rate) with the monthly payment. A larger gap adds risk.
 4. **Guarantee Risk:**  
-   - First, it calculates the baseline guarantee percentage—the percentage of the contract covered by scheduled payments over the guarantee term (capped at 100%).
+   - Calculates the baseline guarantee percentage – the percentage of the contract covered by scheduled payments over the guarantee term.
    - If the minimum guarantee is 100%, no extra risk is added.
    - If the minimum guarantee is at or below the baseline, full risk is applied.
    - For values between the baseline and 100%, risk is reduced linearly.
+   - A longer guarantee due term increases risk.
 5. **Revenue Share Risk:**  
    A lower monthly revenue share percentage increases risk.
 6. **Deferred Payment Risk:**  
    Estimates how long the work should take (contract value divided by the service provider’s monthly capacity) and adds risk if the payment period extends beyond that.
    
 If total payments meet or exceed the contract value, all extra risk is neutralized.
-These multipliers multiply together to form a Final Multiplier that adjusts the Contract Value into the Total Payment.
+The multipliers multiply together to form a Final Multiplier that adjusts the Contract Value into the Total Payment.
 The Additional Revenue Share is the extra amount above the Contract Value.
 """)
